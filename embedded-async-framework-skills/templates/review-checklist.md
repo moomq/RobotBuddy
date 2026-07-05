@@ -1,0 +1,5 @@
+- Memory
+- Thread safety
+- Queue overflow
+- Error handling
+- MISRA

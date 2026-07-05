@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($bytes = [System.IO.File]::ReadAllBytes\\(\"F:\\\\04 code\\\\RobotBuddy\\\\robot.PNG\"\\); $header = $bytes[0..7] | ForEach-Object { $_.ToString\\(\"X2\"\\) }; Write-Host \"Header bytes: $\\($header -join ' '\\)\"; Write-Host \"Is PNG: $\\($header[1..3] -join '' -eq '504E47'\\)\")",
+      "PowerShell(Add-Type -AssemblyName System.Drawing; $img = [System.Drawing.Image]::FromFile\\(\"F:\\\\04 code\\\\RobotBuddy\\\\robot.PNG\"\\); Write-Host \"Width: $\\($img.Width\\)\"; Write-Host \"Height: $\\($img.Height\\)\"; Write-Host \"PixelFormat: $\\($img.PixelFormat\\)\"; Write-Host \"HorizontalResolution: $\\($img.HorizontalResolution\\)\"; Write-Host \"VerticalResolution: $\\($img.VerticalResolution\\)\"; Write-Host \"Flags: $\\($img.Flags\\)\"; $img.Dispose\\(\\))",
+      "PowerShell(Add-Type -AssemblyName System.Drawing; $img = [System.Drawing.Image]::FromFile\\(\"F:\\\\04 code\\\\RobotBuddy\\\\robot.PNG\"\\); $bmp = New-Object System.Drawing.Bitmap\\(512, 512\\); $g = [System.Drawing.Graphics]::FromImage\\($bmp\\); $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic; $g.DrawImage\\($img, 0, 0, 512, 512\\); $bmp.Save\\(\"F:\\\\04 code\\\\RobotBuddy\\\\robot_small.png\", [System.Drawing.Imaging.ImageFormat]::Png\\); $g.Dispose\\(\\); $bmp.Dispose\\(\\); $img.Dispose\\(\\); Write-Host \"Created robot_small.png \\(512x512\\)\")",
+      "PowerShell(Add-Type -AssemblyName System.Drawing; $img = [System.Drawing.Image]::FromFile\\(\"F:\\\\04 code\\\\RobotBuddy\\\\robot.PNG\"\\); $img.Save\\(\"F:\\\\04 code\\\\RobotBuddy\\\\robot.jpg\", [System.Drawing.Imaging.ImageFormat]::Jpeg\\); $img.Dispose\\(\\); Write-Host \"Created robot.jpg\")"
+    ]
+  }
+}
