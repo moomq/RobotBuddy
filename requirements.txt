@@ -1,0 +1,24 @@
+# RobotBuddy Python Dependencies
+# ================================
+# Install with: pip install -r requirements.txt
+# Or via ESP-IDF: python -m pip install -r requirements.txt
+
+# ESP-IDF core tools (installed by ESP-IDF installer)
+esptool>=4.7
+esp-coredump>=1.7
+pyserial>=3.5
+idf-component-manager>=1.4
+
+# Development tools
+cmake>=3.16
+ninja
+
+# Testing
+unity>=2.5
+
+# Utilities
+freertos_gdb  # FreeRTOS GDB helper (optional, for debugging)
+reichelt  # Component manager (optional)
+
+# Note: Some dependencies are installed by ESP-IDF's install.bat
+# Run: C:\Espressif\frameworks\esp-idf-v5.4.1\install.bat esp32s3

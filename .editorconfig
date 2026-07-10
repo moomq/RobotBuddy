@@ -1,0 +1,55 @@
+# RobotBuddy — .editorconfig
+# =========================
+# Consistent coding style across all editors and IDEs.
+# See: https://editorconfig.org
+
+root = true
+
+# Default settings for all files
+[*]
+indent_style = space
+indent_size = 4
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# C/C++ source files (RobotBuddy firmware)
+[*.{c,h,cpp,hpp}]
+indent_size = 4
+
+# CMake files
+[CMakeLists.txt]
+indent_size = 2
+
+# Kconfig files
+[Kconfig*]
+indent_size = 4
+
+# Python files
+[*.py]
+indent_size = 4
+
+# Markdown files (allow trailing spaces for line breaks)
+[*.md]
+trim_trailing_whitespace = false
+
+# JSON files
+[*.json]
+indent_size = 2
+
+# YAML files
+[*.{yml,yaml}]
+indent_size = 2
+
+# Partition table CSV
+[partitions.csv]
+indent_size = 4
+
+# Shell scripts
+[*.sh]
+indent_size = 2
+
+# Windows batch files
+[*.bat]
+end_of_line = crlf

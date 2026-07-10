@@ -1,0 +1,54 @@
+menu "RobotBuddy Configuration"
+
+    config ROBOTBUDDY_FIRMWARE_VERSION
+        string "Firmware Version"
+        default "0.1.0-dev"
+        help
+            Current firmware version string (SemVer format).
+            Updated by /release command.
+
+    config ROBOTBUDDY_HARDWARE_VERSION
+        string "Hardware Version"
+        default "V1.0"
+        help
+            Hardware version identifier.
+            V1.0 = ESP32-S3-WROOM-1-N16R8 + ST7789 + INMP441 + MAX98357A
+
+    config ROBOTBUDDY_DEBUG_ENABLE
+        bool "Enable debug logging"
+        default y
+        help
+            Enable verbose debug logging for all RobotBuddy modules.
+            Disable for production to reduce flash and RAM usage.
+
+    config ROBOTBUDDY_WIFI_SSID
+        string "Default WiFi SSID"
+        default "RobotBuddy_Setup"
+        help
+            Default WiFi SSID for initial configuration.
+            Will be overwritten by provisioning process.
+
+    config ROBOTBUDDY_AUDIO_SAMPLE_RATE
+        int "Audio Sample Rate (Hz)"
+        default 16000
+        help
+            Audio sample rate in Hz. Supported: 8000, 16000, 22050, 44100, 48000.
+            RobotBuddy uses 16000 Hz for voice interaction.
+
+    config ROBOTBUDDY_DISPLAY_FPS
+        int "Display Refresh Rate (FPS)"
+        default 30
+        range 10 60
+        help
+            Target display refresh rate in frames per second.
+            Higher values require more CPU and SPI bandwidth.
+
+    config ROBOTBUDDY_MOTION_CONTROL_HZ
+        int "Motor Control Rate (Hz)"
+        default 100
+        range 50 200
+        help
+            Motor PID control loop frequency in Hz.
+            100 Hz is recommended for N20 motors with DRV8833.
+
+endmenu

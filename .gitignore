@@ -1,0 +1,97 @@
+# RobotBuddy — .gitignore
+# ========================
+# ESP-IDF + PlatformIO + VS Code + Claude Code
+
+# ========================
+# ESP-IDF Build Artifacts
+# ========================
+build/
+sdkconfig.old
+sdkconfig
+managed_components/
+dependencies.lock
+partition_table/*.bin
+
+# ========================
+# Compiled Objects & Binaries
+# ========================
+*.o
+*.obj
+*.elf
+*.bin
+*.map
+*.d
+*.pyc
+*.pyo
+
+# ========================
+# IDE & Editor
+# ========================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ========================
+# Claude Code
+# ========================
+.claude/settings.local.json
+
+# ========================
+# Python
+# ========================
+__pycache__/
+*.egg-info/
+dist/
+.eggs/
+
+# ========================
+# Firmware Output
+# ========================
+flash_args
+flash_args.in
+download_flashes.txt
+
+# ========================
+# Test
+# ========================
+test/build/
+test/unity/
+
+# ========================
+# OS
+# ========================
+Thumbs.db
+Desktop.ini
+
+# ========================
+# Documentation Build
+# ========================
+docs/_build/
+docs/.doxygen/
+
+# ========================
+# 3D Models (large binary files)
+# ========================
+models/*.stl
+models/*.3mf
+!models/.gitkeep
+
+# ========================
+# Local Configuration (keep templates)
+# ========================
+firmware/sdkconfig
+!firmware/sdkconfig.defaults
+!firmware/sdkconfig.defaults.*
+
+# ========================
+# Secrets & Credentials
+# ========================
+*.key
+*.pem
+*.p12
+credentials/
+.env
+.env.local
