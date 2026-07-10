@@ -68,6 +68,33 @@ ESP-IDF v5.4.1 正在通过 `git clone` 安装到 `C:\Espressif\frameworks\esp-i
    idf.py build
 ```
 
+```
+方式 A（推荐）：ESP-IDF Tools Installer
+  1. 访问 https://dl.espressif.com/dl/esp-idf/ 下载安装器
+  2. 运行安装器，选择 ESP32-S3 目标
+  3. 安装完成后打开 ESP-IDF PowerShell 终端
+
+  方式 B：Git Clone（在 CMD 终端执行）
+  cd C:\
+  mkdir Espressif\frameworks
+  cd Espressif\frameworks
+  git clone -b v5.4.1 --depth 1 --recursive https://github.com/espressif/esp-idf.git esp-idf-v5.4.1
+  cd esp-idf-v5.4.1
+  install.bat esp32s3
+  export.bat
+
+  安装完成后，编译固件：
+  cd "F:\04 code\RobotBuddy\firmware"
+  idf.py set-target esp32s3
+  idf.py build
+
+  烧录到设备：
+  idf.py -p COM3 flash monitor
+
+```
+
+
+
 ## 📋 后续步骤
 
 1. **ESP-IDF 安装完成后** → 运行 `install.bat esp32s3` 安装工具链
