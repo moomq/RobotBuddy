@@ -14,6 +14,7 @@ idf_component_register(
              esp_timer
              freertos
              log
+             spi_flash
 )
 
 # Target chip verification

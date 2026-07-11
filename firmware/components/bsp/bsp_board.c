@@ -21,7 +21,7 @@
 
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
-#include "driver/i2c.h"
+#include "driver/i2c_master.h"
 #include "driver/i2s_std.h"
 #include "driver/ledc.h"
 
@@ -86,7 +86,11 @@ static esp_err_t bsp_init_i2c(void)
         .scl_io_num = BSP_PIN_I2C_SCL,
         .clk_source = I2C_CLK_SRC_DEFAULT,
         .glitch_ignore_cnt = 7,
-        .flags.enable_internal_pullup = true,
+        .intr_priority = 0,
+        .trans_queue_depth = 0,
+        .flags = {
+            .enable_internal_pullup = true,
+        },
     };
 
     i2c_master_bus_handle_t bus_handle;
@@ -133,20 +137,8 @@ static esp_err_t bsp_init_i2s(void)
     ESP_ERROR_CHECK(i2s_new_channel(&rx_chan_conf, &rx_handle, NULL));
 
     i2s_std_config_t rx_std_conf = {
-        .clk_cfg = {
-            .sample_rate_hz = BSP_I2S_SAMPLE_RATE,
-            .clk_src = I2S_CLK_SRC_DEFAULT,
-            .mclk_multiple = I2S_MCLK_MULTIPLE_256,
-        },
-        .slot_cfg = {
-            .data_bit_width = I2S_DATA_BIT_WIDTH_16BIT,
-            .slot_bit_width = I2S_SLOT_BIT_WIDTH_32BIT,
-            .slot_mode = I2S_SLOT_MODE_MONO,
-            .slot_mask = I2S_SLOT_MASK_LEFT,
-            .std = {
-                .clk_sel = I2S_CLK_SEL_APLL, /* Use APLL for accurate clock */
-            },
-        },
+        .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(BSP_I2S_SAMPLE_RATE),
+        .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_MONO),
         .gpio_cfg = {
             .mclk = GPIO_NUM_NC,
             .bclk = BSP_PIN_I2S_BCLK,
@@ -160,6 +152,9 @@ static esp_err_t bsp_init_i2s(void)
             },
         },
     };
+    /* Override slot config for INMP441: 32-bit slot width, left channel */
+    rx_std_conf.slot_cfg.slot_bit_width = I2S_SLOT_BIT_WIDTH_32BIT;
+    rx_std_conf.slot_cfg.slot_mask = I2S_STD_SLOT_LEFT;
     ESP_ERROR_CHECK(i2s_channel_init_std_mode(rx_handle, &rx_std_conf));
 
     /* I2S TX channel (Amplifier MAX98357A) */
@@ -168,20 +163,8 @@ static esp_err_t bsp_init_i2s(void)
     ESP_ERROR_CHECK(i2s_new_channel(&tx_chan_conf, NULL, &tx_handle));
 
     i2s_std_config_t tx_std_conf = {
-        .clk_cfg = {
-            .sample_rate_hz = BSP_I2S_SAMPLE_RATE,
-            .clk_src = I2S_CLK_SRC_DEFAULT,
-            .mclk_multiple = I2S_MCLK_MULTIPLE_256,
-        },
-        .slot_cfg = {
-            .data_bit_width = I2S_DATA_BIT_WIDTH_16BIT,
-            .slot_bit_width = I2S_SLOT_BIT_WIDTH_32BIT,
-            .slot_mode = I2S_SLOT_MODE_MONO,
-            .slot_mask = I2S_SLOT_MASK_LEFT,
-            .std = {
-                .clk_sel = I2S_CLK_SEL_APLL,
-            },
-        },
+        .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(BSP_I2S_SAMPLE_RATE),
+        .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_MONO),
         .gpio_cfg = {
             .mclk = GPIO_NUM_NC,
             .bclk = BSP_PIN_I2S_BCLK,
@@ -195,6 +178,9 @@ static esp_err_t bsp_init_i2s(void)
             },
         },
     };
+    /* Override slot config for MAX98357A: 32-bit slot width, left channel */
+    tx_std_conf.slot_cfg.slot_bit_width = I2S_SLOT_BIT_WIDTH_32BIT;
+    tx_std_conf.slot_cfg.slot_mask = I2S_STD_SLOT_LEFT;
     ESP_ERROR_CHECK(i2s_channel_init_std_mode(tx_handle, &tx_std_conf));
 
     /* NOTE: RX and TX share the same I2S port number but use separate channels.
