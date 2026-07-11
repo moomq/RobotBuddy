@@ -272,3 +272,4 @@ ESP_ERROR_CHECK(gpio_config(&io_conf));
 - [ ] 日志输出适当（不多不少，可定位问题）
 - [ ] 魔法数字替换为命名常量
 - [ ] 无 dead code / 注释掉的大段代码
+- [ ] 是否更新changelog文档
