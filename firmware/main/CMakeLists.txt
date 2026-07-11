@@ -6,6 +6,22 @@ idf_component_register(
     SRCS "main.c"
     INCLUDE_DIRS "."
     REQUIRES bsp
+             framework
+             st7789
+             drv8833
+             mpu6050
+             ir_sensor
+             battery
+             wifi_manager
+             display_manager
+             emotion_engine
+             audio_manager
+             cloud_manager
+             motion_manager
+             sensor_manager
+             battery_monitor
+             behavior_system
+             ai_dialog
              nvs_flash
              esp_wifi
              esp_netif
@@ -15,6 +31,7 @@ idf_component_register(
              freertos
              log
              spi_flash
+             heap
 )
 
 # Target chip verification

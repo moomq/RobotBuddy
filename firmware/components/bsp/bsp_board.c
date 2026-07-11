@@ -289,10 +289,12 @@ esp_err_t bsp_board_init(void)
     /* Phase 1: Critical — GPIO */
     ESP_ERROR_CHECK(bsp_init_gpio());
 
-    /* Phase 2: Bus — I2C, SPI, I2S */
+    /* Phase 2: Bus — I2C, SPI (I2S is owned by audio_manager) */
     ESP_ERROR_CHECK(bsp_init_i2c());
     ESP_ERROR_CHECK(bsp_init_spi());
-    ESP_ERROR_CHECK(bsp_init_i2s());
+    /* NOTE: I2S bus initialization is handled entirely by audio_manager.
+     * The audio_manager creates, configures, and destroys I2S channels
+     * as part of its own init/deinit lifecycle. This avoids double-init. */
 
     /* Phase 3: Peripheral — PWM, ADC */
     ESP_ERROR_CHECK(bsp_init_pwm());

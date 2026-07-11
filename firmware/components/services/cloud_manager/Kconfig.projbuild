@@ -1,0 +1,76 @@
+menu "Cloud Manager"
+
+    choice CLOUD_DEFAULT_PROVIDER
+        prompt "Default Cloud Provider"
+        default CLOUD_DEFAULT_PROVIDER_CLAUDE
+        help
+            Select the default cloud provider for ASR, LLM, and TTS requests.
+            Can be changed at runtime via cloud_set_provider().
+
+        config CLOUD_DEFAULT_PROVIDER_CLAUDE
+            bool "Anthropic Claude"
+
+        config CLOUD_DEFAULT_PROVIDER_OPENAI
+            bool "OpenAI"
+
+        config CLOUD_DEFAULT_PROVIDER_DEEPSEEK
+            bool "DeepSeek"
+    endchoice
+
+    config CLOUD_DEFAULT_TIMEOUT_MS
+        int "Default HTTP Timeout (ms)"
+        default 15000
+        range 1000 60000
+        help
+            Default timeout for cloud HTTP requests in milliseconds.
+            Can be overridden at runtime via cloud_config_t.timeout_ms.
+
+    config CLOUD_CLAUDE_ENDPOINT
+        string "Claude API Endpoint"
+        default "https://api.anthropic.com"
+        help
+            Base URL for the Anthropic Claude API.
+            Change this for proxy servers or self-hosted endpoints.
+
+    config CLOUD_OPENAI_ENDPOINT
+        string "OpenAI API Endpoint"
+        default "https://api.openai.com"
+        help
+            Base URL for the OpenAI API.
+            Change this for proxy servers or Azure OpenAI endpoints.
+
+    config CLOUD_DEEPSEEK_ENDPOINT
+        string "DeepSeek API Endpoint"
+        default "https://api.deepseek.com"
+        help
+            Base URL for the DeepSeek API.
+            Change this for proxy servers or self-hosted endpoints.
+
+    config CLOUD_CLAUDE_API_KEY
+        string "Claude API Key"
+        default ""
+        help
+            Default API key for Anthropic Claude.
+            Can be overridden at runtime via cloud_config_t or NVS.
+            WARNING: Storing API keys in firmware is insecure for production.
+            Use NVS or secure storage instead.
+
+    config CLOUD_OPENAI_API_KEY
+        string "OpenAI API Key"
+        default ""
+        help
+            Default API key for OpenAI.
+            Can be overridden at runtime via cloud_config_t or NVS.
+            WARNING: Storing API keys in firmware is insecure for production.
+            Use NVS or secure storage instead.
+
+    config CLOUD_DEEPSEEK_API_KEY
+        string "DeepSeek API Key"
+        default ""
+        help
+            Default API key for DeepSeek.
+            Can be overridden at runtime via cloud_config_t or NVS.
+            WARNING: Storing API keys in firmware is insecure for production.
+            Use NVS or secure storage instead.
+
+endmenu

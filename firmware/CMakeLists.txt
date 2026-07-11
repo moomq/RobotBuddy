@@ -5,8 +5,28 @@
 #
 cmake_minimum_required(VERSION 3.16)
 
-# Set the component directory where additional components are located
-set(EXTRA_COMPONENT_DIRS "components")
+# Set the component directory where additional components are located.
+# ESP-IDF searches ONE level deep from each path, so we list every
+# component subdirectory explicitly.
+set(EXTRA_COMPONENT_DIRS
+    "components/framework"
+    "components/bsp"
+    "components/drivers/st7789"
+    "components/drivers/drv8833"
+    "components/drivers/mpu6050"
+    "components/drivers/ir_sensor"
+    "components/drivers/battery"
+    "components/services/wifi_manager"
+    "components/services/display_manager"
+    "components/services/emotion_engine"
+    "components/services/audio_manager"
+    "components/services/cloud_manager"
+    "components/services/motion_manager"
+    "components/services/sensor_manager"
+    "components/services/battery_monitor"
+    "components/app/behavior_system"
+    "components/app/ai_dialog"
+)
 
 # Include the IDF project
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)

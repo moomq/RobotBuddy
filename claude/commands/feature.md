@@ -69,3 +69,4 @@
 - FreeRTOS 任务栈分配需合理，防止溢出
 - ISR 中不能使用阻塞 API
 - 所有云端通信需考虑 WiFi 断线重连
+- 文档中禁用PlantUML绘制UML图，一律使用mermaid。

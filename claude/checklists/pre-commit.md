@@ -72,6 +72,7 @@
 - [ ] 新增 API 有 Doxygen 注释
 - [ ] 配置参数有 Kconfig 帮助文本（如适用）
 - [ ] README / 相关文档已更新
+- [ ] UML有使用PlantUML的，统一改成mermaid
 
 ### 日志
 - [ ] 关键状态变更有 `ESP_LOGI`
