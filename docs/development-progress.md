@@ -1,8 +1,8 @@
 # RobotBuddy V1.0 MVP — 开发进度报告
 
-> **版本:** 1.0  
+> **版本:** 1.1  
 > **日期:** 2026-07-11  
-> **状态:** 代码实现完成，待修复审查问题后实机验证
+> **状态:** MVP代码完成 + PC模拟器实现完成
 
 ---
 
@@ -101,6 +101,38 @@
 | 🟡 Warning | 运动命令 duration 阻塞 | motion_manager.c | 🔵 待重构 |
 | 🟡 Warning | behavior Queue 超时 | behavior_system.c | 🔵 待优化 |
 | 🟡 Warning | LLM 响应缓冲区 | cloud_manager.c | 🔵 待增大 |
+
+---
+
+---
+
+## FR-01 PC模拟器（新增）
+
+| 组件 | 文件 | 说明 | 状态 |
+|------|------|------|------|
+| 兼容层 esp_err | `simulator/platform/esp_err.h` | ESP-IDF错误码兼容 | ✅ |
+| 兼容层 esp_log | `simulator/platform/esp_log.h` | 日志宏兼容(printf) | ✅ |
+| 兼容层 esp_random | `simulator/platform/esp_random.h` | 随机数兼容(rand) | ✅ |
+| 兼容层 esp_heap_caps | `simulator/platform/esp_heap_caps.h` | 内存分配兼容(malloc) | ✅ |
+| 兼容层 esp_timer | `simulator/platform/esp_timer.h/.c` | 定时器兼容(clock_gettime) | ✅ |
+| 兼容层 esp_task_wdt | `simulator/platform/esp_task_wdt.h` | 看门狗no-op兼容 | ✅ |
+| 兼容层 FreeRTOS | `simulator/platform/freertos/*.h/.c` | 任务/延时模拟 | ✅ |
+| 兼容层 bsp_pinmap | `simulator/platform/bsp_pinmap.h` | 空引脚定义 | ✅ |
+| 显示管理器PC版 | `simulator/drivers/display_sim.c/.h` | SDL2帧缓冲渲染 | ✅ |
+| 模拟器入口 | `simulator/main.c` | SDL主循环+键盘交互 | ✅ |
+| 构建脚本 | `simulator/CMakeLists.txt` | CMake构建(支持3平台) | ✅ |
+| 使用文档 | `simulator/README.md` | 编译/运行/按键说明 | ✅ |
+
+**关键设计:**
+- `emotion_engine.c` 与ESP32版本**完全相同**（零修改编译）
+- 9个兼容层头文件提供ESP-IDF API的PC等价实现
+- SDL2渲染后端替代ST7789 SPI输出
+- 支持11种表情切换 + 窗口缩放 + FPS显示
+
+**新增文档:**
+- `docs/requirement/fr01-pc-simulator-requirements.md` — 需求规格
+- `docs/architecture/fr01-pc-simulator-architecture.md` — 架构设计
+- `docs/review/2026-07-11-pc-simulator-review.md` — 代码审查
 
 ---
 
