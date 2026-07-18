@@ -27,6 +27,9 @@
 
 static const char *TAG = "BSP";
 
+/* Global bus handles — stored for proper cleanup in bsp_board_deinit() */
+static i2c_master_bus_handle_t s_i2c_bus_handle = NULL;
+
 /* ============================================================
  * Internal: Initialize GPIO pins
  * ============================================================ */
@@ -89,12 +92,11 @@ static esp_err_t bsp_init_i2c(void)
         .intr_priority = 0,
         .trans_queue_depth = 0,
         .flags = {
-            .enable_internal_pullup = true,
+            .enable_internal_pullup = false,  /* External 4.7kΩ pull-ups on SDA/SCL */
         },
     };
 
-    i2c_master_bus_handle_t bus_handle;
-    ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_bus_conf, &bus_handle));
+    ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_bus_conf, &s_i2c_bus_handle));
 
     ESP_LOGI(TAG, "I2C bus initialized at %d Hz", BSP_I2C_FREQ_HZ);
     return ESP_OK;
@@ -318,15 +320,15 @@ esp_err_t bsp_board_deinit(void)
 {
     ESP_LOGI(TAG, "Board deinitialization...");
 
-    /* Stop I2S channels first */
-    /* NOTE: I2S channel handles should be stored globally or
-     * passed by audio_manager for proper cleanup */
+    /* Free I2C bus */
+    if (s_i2c_bus_handle) {
+        ESP_ERROR_CHECK(i2c_del_master_bus(s_i2c_bus_handle));
+        s_i2c_bus_handle = NULL;
+        ESP_LOGI(TAG, "I2C bus freed");
+    }
 
     /* Free SPI bus (display should be deinitialized first) */
     spi_bus_free(BSP_LCD_SPI_HOST);
-
-    /* Free I2C bus */
-    /* NOTE: I2C bus handle should be stored for proper cleanup */
 
     ESP_LOGI(TAG, "Board deinitialized");
     return ESP_OK;
