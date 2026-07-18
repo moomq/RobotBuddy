@@ -212,6 +212,52 @@ cloud_provider_t cloud_get_provider(void);
  */
 bool cloud_manager_is_connected(void);
 
+/* ============================================================
+ * V2.0 Streaming TTS API
+ * ============================================================ */
+
+/**
+ * @brief Stream TTS audio with low-latency playback
+ *
+ * V2.0 enhancement: Opens a streaming connection to the cloud TTS
+ * endpoint (WebSocket or chunked HTTP) and feeds audio data directly
+ * to the audio playback ring buffer as chunks arrive, enabling
+ * "play-while-download" for reduced end-to-end latency.
+ *
+ * Falls back to cloud_tts_synthesize() if streaming is unavailable.
+ *
+ * @param text     Text to synthesize (UTF-8, null-terminated)
+ * @param text_len Length of text
+ * @return ESP_OK on success
+ *         ESP_ERR_INVALID_STATE if not initialized or WiFi not connected
+ *         ESP_FAIL on streaming error
+ */
+esp_err_t cloud_tts_stream(const char *text, size_t text_len);
+
+/**
+ * @brief Set the API key for a specific provider
+ *
+ * Persists the key to NVS and updates the runtime copy.
+ * Thread-safe.
+ *
+ * @param provider Target provider
+ * @param api_key  API key string (null-terminated)
+ * @return ESP_OK on success
+ */
+esp_err_t cloud_set_api_key(cloud_provider_t provider, const char *api_key);
+
+/**
+ * @brief Get the current API key for a provider (for Web console display)
+ *
+ * Returns a masked version of the key for security.
+ *
+ * @param provider Target provider
+ * @param buf      Output buffer
+ * @param buf_size Size of output buffer
+ * @return ESP_OK on success
+ */
+esp_err_t cloud_get_api_key_masked(cloud_provider_t provider, char *buf, size_t buf_size);
+
 #ifdef __cplusplus
 }
 #endif

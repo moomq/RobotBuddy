@@ -72,6 +72,45 @@ typedef enum {
     EVENT_BEHAVIOR_STATE_CHANGE = 0x0600,
     EVENT_BEHAVIOR_COMMAND      = 0x0601,
 
+    /* Display text events (0x07xx) — V2.0 */
+    EVENT_DISPLAY_TEXT_MSG       = 0x0700,
+    EVENT_DISPLAY_CLEAR_TEXT     = 0x0701,
+    EVENT_DISPLAY_STATUS_ICON    = 0x0702,
+
+    /* Touch events (0x08xx) — V2.0 */
+    EVENT_TOUCH_SINGLE          = 0x0800,
+    EVENT_TOUCH_DOUBLE          = 0x0801,
+    EVENT_TOUCH_LONG            = 0x0802,
+
+    /* Wake word events (0x09xx) — V2.0 */
+    EVENT_WAKE_WORD_DETECTED    = 0x0900,
+
+    /* MQTT events (0x0Axx) — V2.0 */
+    EVENT_MQTT_CONNECTED        = 0x0A00,
+    EVENT_MQTT_DISCONNECTED     = 0x0A01,
+    EVENT_MQTT_MESSAGE          = 0x0A02,
+
+    /* OTA events (0x0Bxx) — V2.0 */
+    EVENT_OTA_START             = 0x0B00,
+    EVENT_OTA_PROGRESS          = 0x0B01,
+    EVENT_OTA_COMPLETE          = 0x0B02,
+    EVENT_OTA_ERROR             = 0x0B03,
+
+    /* Pomodoro events (0x0Cxx) — V2.0 */
+    EVENT_POMODORO_START        = 0x0C00,
+    EVENT_POMODORO_TICK         = 0x0C01,
+    EVENT_POMODORO_DONE         = 0x0C02,
+    EVENT_POMODORO_BREAK_DONE   = 0x0C03,
+
+    /* Dev tool events (0x0Dxx) — V2.0 */
+    EVENT_BUILD_STATUS          = 0x0D00,
+    EVENT_GIT_STATUS            = 0x0D01,
+
+    /* Power events (0x0Exx) — V2.0 */
+    EVENT_POWER_STATE_CHANGE    = 0x0E00,
+    EVENT_POWER_ENTER_SLEEP     = 0x0E01,
+    EVENT_POWER_WAKEUP          = 0x0E02,
+
 } robot_event_id_t;
 
 /* ============================================================
@@ -205,6 +244,120 @@ typedef struct {
     char text[256];               /**< Recognized text */
     float confidence;             /**< Confidence (0.0 - 1.0) */
 } asr_result_t;
+
+/* ============================================================
+ * V2.0 Event Payload Structures
+ * ============================================================ */
+
+/**
+ * @brief Text message payload (for scrolling display)
+ */
+typedef struct {
+    char text[200];               /**< Message text */
+    uint8_t priority;             /**< Priority (0=low, 1=medium, 2=high) */
+    uint16_t duration_ms;         /**< Display duration (0=default 10s) */
+} text_msg_event_t;
+
+/**
+ * @brief Wake word detection payload
+ */
+typedef struct {
+    char keyword[32];             /**< Detected keyword */
+    float confidence;             /**< Detection confidence (0.0 - 1.0) */
+} wake_word_event_t;
+
+/**
+ * @brief MQTT message payload
+ */
+typedef struct {
+    char topic[128];              /**< Topic path */
+    char payload[512];            /**< Message content */
+    size_t payload_len;           /**< Content length */
+} mqtt_message_event_t;
+
+/**
+ * @brief OTA progress payload
+ */
+typedef struct {
+    uint8_t percent;              /**< Progress percentage (0-100) */
+    uint32_t downloaded;          /**< Bytes downloaded */
+    uint32_t total;               /**< Total bytes */
+} ota_progress_event_t;
+
+/**
+ * @brief Build status payload (from VS Code / CI)
+ */
+typedef struct {
+    uint8_t status;               /**< 0=running, 1=success, 2=fail, 3=warning */
+    char msg[64];                 /**< Status message */
+} build_status_event_t;
+
+/**
+ * @brief Git status payload
+ */
+typedef struct {
+    uint8_t uncommitted;          /**< Uncommitted file count */
+    uint8_t conflicts;            /**< Conflict file count */
+} git_status_event_t;
+
+/**
+ * @brief Pomodoro timer payload
+ */
+typedef struct {
+    uint16_t remaining_sec;       /**< Remaining seconds */
+    uint8_t round;                /**< Current round number */
+    bool is_break;                /**< True if in break period */
+} pomodoro_event_t;
+
+/**
+ * @brief Power state change payload
+ */
+typedef struct {
+    uint8_t state;                /**< power_state_t value */
+    uint32_t idle_ms;             /**< Idle duration in ms */
+} power_event_t;
+
+/**
+ * @brief Touch gesture type
+ */
+typedef enum {
+    TOUCH_GESTURE_NONE = 0,
+    TOUCH_GESTURE_SINGLE_TAP,
+    TOUCH_GESTURE_DOUBLE_TAP,
+    TOUCH_GESTURE_LONG_PRESS,
+} touch_gesture_t;
+
+/**
+ * @brief Pomodoro state
+ */
+typedef enum {
+    POMODORO_STATE_IDLE = 0,
+    POMODORO_STATE_WORKING,
+    POMODORO_STATE_BREAK,
+    POMODORO_STATE_PAUSED,
+} pomodoro_state_t;
+
+/**
+ * @brief Power management state
+ */
+typedef enum {
+    POWER_STATE_ACTIVE = 0,
+    POWER_STATE_DISPLAY_DIM,
+    POWER_STATE_WIFI_LIGHT_SLEEP,
+    POWER_STATE_DEEP_SLEEP,
+} power_state_t;
+
+/**
+ * @brief OTA service state
+ */
+typedef enum {
+    OTA_STATE_IDLE = 0,
+    OTA_STATE_DOWNLOADING,
+    OTA_STATE_VERIFYING,
+    OTA_STATE_APPLYING,
+    OTA_STATE_REBOOTING,
+    OTA_STATE_ERROR,
+} ota_state_t;
 
 #ifdef __cplusplus
 }

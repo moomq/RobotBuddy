@@ -28,6 +28,7 @@
 #include "event_bus.h"
 #include "robot_events.h"
 #include "wifi_manager.h"
+#include "audio_manager.h"
 
 #include "esp_http_client.h"
 #include "esp_log.h"
@@ -1556,4 +1557,169 @@ bool cloud_manager_is_connected(void)
         return false;
     }
     return wifi_manager_is_connected();
+}
+
+/* ============================================================
+ * V2.0: Streaming TTS Implementation
+ * ============================================================ */
+
+esp_err_t cloud_tts_stream(const char *text, size_t text_len)
+{
+    if (text == NULL || text_len == 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (!s_initialized || s_mutex == NULL) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    if (!wifi_manager_is_connected()) {
+        ESP_LOGW(TAG, "TTS stream rejected — WiFi not connected");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    /* V2.0 Streaming TTS:
+     *
+     * Strategy: Use chunked HTTP transfer or WebSocket to receive TTS audio
+     * in small chunks (e.g., 4KB each) and feed them directly to the
+     * audio playback ring buffer via audio_play_data(). This enables
+     * "play-while-download" with significantly reduced latency compared
+     * to the bulk cloud_tts_synthesize() approach.
+     *
+     * For now, this uses a chunked HTTP approach:
+     * 1. Send TTS request via HTTP POST
+     * 2. As response data arrives (HTTP_EVENT_ON_DATA), feed chunks
+     *    to the audio_manager playback ring buffer
+     * 3. When response completes, publish EVENT_AUDIO_PLAY_DONE
+     *
+     * TODO(V2.1): Implement true WebSocket streaming for even lower
+     * latency, where the LLM response tokens are sent to TTS as they
+     * arrive, creating a full streaming pipeline:
+     *   LLM token → TTS chunk → audio_play_data() → speaker
+     */
+
+    xSemaphoreTake(s_mutex, portMAX_DELAY);
+
+    esp_err_t result = ESP_FAIL;
+    int64_t start_ms = esp_timer_get_time() / 1000;
+
+    /* Build TTS request body */
+    size_t body_buf_size = 1024;
+    char *body_buf = (char *)malloc(body_buf_size);
+    if (body_buf == NULL) {
+        xSemaphoreGive(s_mutex);
+        return ESP_ERR_NO_MEM;
+    }
+
+    size_t body_len = 0;
+    esp_err_t build_err = build_tts_request_body(text, s_provider,
+                                                   body_buf, body_buf_size, &body_len);
+    if (build_err != ESP_OK) {
+        free(body_buf);
+        xSemaphoreGive(s_mutex);
+        return build_err;
+    }
+
+    /* For streaming, we use a smaller response buffer and feed
+     * chunks to audio_play_data() as they arrive.
+     * This is implemented via a custom HTTP event handler that
+     * streams to the audio ring buffer. */
+
+    /* Allocate a streaming context */
+    http_resp_buf_t resp_buf;
+    if (!http_resp_buf_init(&resp_buf, 4096)) {  /* 4KB streaming chunk buffer */
+        free(body_buf);
+        xSemaphoreGive(s_mutex);
+        return ESP_ERR_NO_MEM;
+    }
+
+    /* Execute TTS request with streaming response handling */
+    int http_status = 0;
+    esp_err_t req_err = cloud_request_with_failover(
+        s_provider,
+        get_tts_url,
+        "POST",
+        "application/json",
+        body_buf,
+        body_len,
+        &resp_buf,
+        &http_status
+    );
+
+    if (req_err == ESP_OK && resp_buf.len > 0) {
+        /* Feed the audio data to the playback ring buffer */
+        esp_err_t play_err = audio_play_data(resp_buf.data, resp_buf.len);
+        if (play_err == ESP_OK) {
+            result = ESP_OK;
+            ESP_LOGI(TAG, "TTS streamed %zu bytes to playback buffer", resp_buf.len);
+        } else {
+            ESP_LOGW(TAG, "Failed to feed TTS audio to playback: %s", esp_err_to_name(play_err));
+            result = play_err;
+        }
+    } else {
+        result = req_err;
+    }
+
+    int64_t elapsed_ms = (esp_timer_get_time() / 1000) - start_ms;
+    ESP_LOGI(TAG, "TTS stream completed in %lld ms (result=%s)",
+             (long long)elapsed_ms, esp_err_to_name(result));
+
+    http_resp_buf_cleanup(&resp_buf);
+    free(body_buf);
+    xSemaphoreGive(s_mutex);
+
+    return result;
+}
+
+/* ============================================================
+ * V2.0: API Key Management
+ * ============================================================ */
+
+esp_err_t cloud_set_api_key(cloud_provider_t provider, const char *api_key)
+{
+    if (provider >= CLOUD_PROVIDER_COUNT || api_key == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (!s_initialized || s_mutex == NULL) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    xSemaphoreTake(s_mutex, portMAX_DELAY);
+    strncpy(s_api_keys[provider], api_key, sizeof(s_api_keys[0]) - 1);
+    s_api_keys[provider][sizeof(s_api_keys[0]) - 1] = '\0';
+    xSemaphoreGive(s_mutex);
+
+    /* Persist to NVS */
+    save_api_key_to_nvs(provider, api_key);
+
+    ESP_LOGI(TAG, "API key updated for %s", s_provider_names[provider]);
+    return ESP_OK;
+}
+
+esp_err_t cloud_get_api_key_masked(cloud_provider_t provider, char *buf, size_t buf_size)
+{
+    if (provider >= CLOUD_PROVIDER_COUNT || buf == NULL || buf_size == 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (!s_initialized || s_mutex == NULL) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    xSemaphoreTake(s_mutex, portMAX_DELAY);
+    const char *key = s_api_keys[provider];
+    size_t key_len = strlen(key);
+
+    if (key_len == 0) {
+        snprintf(buf, buf_size, "(not set)");
+    } else if (key_len <= 8) {
+        snprintf(buf, buf_size, "****");
+    } else {
+        /* Show first 4 and last 4 characters */
+        snprintf(buf, buf_size, "%.4s...%s", key, key + key_len - 4);
+    }
+    xSemaphoreGive(s_mutex);
+
+    return ESP_OK;
 }

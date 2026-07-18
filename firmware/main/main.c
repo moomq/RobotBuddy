@@ -53,15 +53,43 @@
 #include "sensor_manager.h"
 #include "battery_monitor.h"
 
+/* Services — V2.0 */
+#include "text_display.h"
+#include "mqtt_client.h"
+#include "web_server.h"
+#include "ota_service.h"
+#include "wake_word.h"
+#include "power_manager.h"
+
 /* Application */
 #include "behavior_system.h"
 #include "ai_dialog.h"
 
+/* Application — V2.0 */
+#include "pomodoro.h"
+
 static const char *TAG = "RobotBuddy";
 
 /* Firmware version — updated by /release command */
-#define FIRMWARE_VERSION "0.2.0-mvp"
+#define FIRMWARE_VERSION "0.3.0-v2"
 #define HARDWARE_VERSION "V1.0"
+
+/* V2.0 Configuration defaults (overridable via menuconfig) */
+#ifndef CONFIG_MQTT_BROKER_URL
+#define CONFIG_MQTT_BROKER_URL "mqtt://broker.emqx.io:1883"
+#endif
+
+#ifndef CONFIG_MQTT_USERNAME
+#define CONFIG_MQTT_USERNAME ""
+#endif
+
+#ifndef CONFIG_MQTT_PASSWORD
+#define CONFIG_MQTT_PASSWORD ""
+#endif
+
+#ifndef CONFIG_DEVICE_ID
+#define CONFIG_DEVICE_ID "rb-001"
+#endif
 
 /* ============================================================
  * Display Task — renders emotion engine at 30 FPS
@@ -74,6 +102,7 @@ static void display_task(void *arg)
         uint16_t *fb = display_get_framebuffer();
         if (fb != NULL) {
             emotion_render_frame(fb, DISPLAY_WIDTH, DISPLAY_HEIGHT);
+            text_display_render(fb, DISPLAY_WIDTH, DISPLAY_HEIGHT);
             display_commit_frame();
         }
         vTaskDelay(pdMS_TO_TICKS(33)); /* ~30 FPS */
@@ -267,6 +296,99 @@ static esp_err_t init_phase3_services(void)
 }
 
 /* ============================================================
+ * Phase 3b: V2.0 Services (new modules)
+ * ============================================================ */
+static esp_err_t init_phase3b_v2_services(void)
+{
+    ESP_LOGI(TAG, "=== Phase 3b: V2.0 Services ===");
+
+    /* Text Display (scrolling messages + status icons) */
+    text_display_config_t text_cfg = {
+        .y_start = 180,
+        .height = 60,
+        .scroll_speed = 2,
+        .display_timeout_ms = 10000,
+        .max_messages = 5,
+    };
+    esp_err_t ret = text_display_init(&text_cfg);
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "  [OK] Text display initialized");
+    } else {
+        ESP_LOGW(TAG, "  [WARN] Text display init failed: %s", esp_err_to_name(ret));
+    }
+
+    /* Wake Word Detection (ESP-SR) */
+    wake_word_config_t wake_cfg = {
+        .model_name = "hilexin",
+        .detection_threshold = 0.5f,
+        .channel = 0,
+    };
+    ret = wake_word_init(&wake_cfg);
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "  [OK] Wake word initialized");
+    } else {
+        ESP_LOGW(TAG, "  [WARN] Wake word init failed: %s", esp_err_to_name(ret));
+    }
+
+    /* MQTT Client */
+    mqtt_config_t mqtt_cfg = {
+        .broker_url = CONFIG_MQTT_BROKER_URL,
+        .client_id = "robotbuddy-" CONFIG_DEVICE_ID,
+        .username = CONFIG_MQTT_USERNAME,
+        .password = CONFIG_MQTT_PASSWORD,
+        .keepalive_sec = 60,
+        .qos = 1,
+        .device_id = CONFIG_DEVICE_ID,
+    };
+    ret = mqtt_client_init(&mqtt_cfg);
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "  [OK] MQTT client initialized");
+    } else {
+        ESP_LOGW(TAG, "  [WARN] MQTT client init failed: %s", esp_err_to_name(ret));
+    }
+
+    /* Web Server (HTTP console) */
+    web_server_config_t web_cfg = {
+        .port = 80,
+        .max_connections = 4,
+        .auth_enabled = false,
+        .username = "",
+        .password = "",
+    };
+    ret = web_server_init(&web_cfg);
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "  [OK] Web server initialized");
+    } else {
+        ESP_LOGW(TAG, "  [WARN] Web server init failed: %s", esp_err_to_name(ret));
+    }
+
+    /* OTA Service */
+    ret = ota_service_init();
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "  [OK] OTA service initialized");
+    } else {
+        ESP_LOGW(TAG, "  [WARN] OTA service init failed: %s", esp_err_to_name(ret));
+    }
+
+    /* Power Manager */
+    power_config_t power_cfg = {
+        .dim_timeout_ms = 300000,        /* 5 minutes */
+        .light_sleep_timeout_ms = 600000, /* 10 minutes */
+        .deep_sleep_timeout_ms = 1800000, /* 30 minutes */
+        .dim_brightness = 32,
+        .active_brightness = 128,
+    };
+    ret = power_manager_init(&power_cfg);
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "  [OK] Power manager initialized");
+    } else {
+        ESP_LOGW(TAG, "  [WARN] Power manager init failed: %s", esp_err_to_name(ret));
+    }
+
+    return ESP_OK;
+}
+
+/* ============================================================
  * Phase 4: Application layer
  * ============================================================ */
 static esp_err_t init_phase4_application(void)
@@ -294,6 +416,19 @@ static esp_err_t init_phase4_application(void)
     } else {
         ESP_LOGW(TAG, "  [WARN] AI dialog init failed (WiFi may not be connected yet): %s",
                  esp_err_to_name(ret));
+    }
+
+    /* Pomodoro Timer — V2.0 */
+    pomodoro_config_t pomo_cfg = {
+        .work_duration_min = 25,
+        .break_duration_min = 5,
+        .max_rounds = 4,
+    };
+    ret = pomodoro_init(&pomo_cfg);
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "  [OK] Pomodoro initialized");
+    } else {
+        ESP_LOGW(TAG, "  [WARN] Pomodoro init failed: %s", esp_err_to_name(ret));
     }
 
     return ESP_OK;
@@ -324,6 +459,27 @@ static void init_phase5_start_tasks(void)
         sysmon_register_task("display", h_display);
     }
 
+    /* Start V2.0 services (after WiFi is potentially connected) */
+    if (wifi_manager_is_connected()) {
+        /* Start MQTT client */
+        esp_err_t ret = mqtt_client_start();
+        if (ret == ESP_OK) {
+            ESP_LOGI(TAG, "  MQTT client started");
+        }
+
+        /* Start Web server */
+        ret = web_server_start();
+        if (ret == ESP_OK) {
+            ESP_LOGI(TAG, "  Web server started on port 80");
+        }
+    } else {
+        ESP_LOGW(TAG, "  WiFi not connected — MQTT and Web server will start when WiFi connects");
+    }
+
+    /* Start wake word detection */
+    wake_word_start();
+    ESP_LOGI(TAG, "  Wake word detection started");
+
     /* Note: Other tasks (audio_capture, audio_playback, cloud, etc.)
      * are created internally by their respective managers.
      * The behavior_task, sensor_task, and motion_task are also
@@ -347,6 +503,9 @@ void app_main(void)
 
     /* Phase 3: Services */
     init_phase3_services();
+
+    /* Phase 3b: V2.0 Services (new modules) */
+    init_phase3b_v2_services();
 
     /* Phase 4: Application */
     init_phase4_application();

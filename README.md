@@ -10,12 +10,26 @@ RobotBuddy 是一款基于 ESP32-S3 的桌面 AI 编程助手机器人，融合�
 
 ## 核心功能
 
+### V1.0 MVP
+
 - 🤖 **表情显示** — ST7789 IPS LCD, 240×240, 多种动画表情
 - 🎤 **语音交互** — INMP441 麦克风 + MAX98357A 功放, 云端 ASR/LLM/TTS
 - 🛞 **桌面移动** — N20 双轮差速 + 红外避障/防跌落
 - 🧠 **AI 编程助手** — 对接 Claude/GPT/DeepSeek, 代码理解与 Debug
-- 📡 **WiFi 联网** — OTA 升级 + 云端通信
+- 📡 **WiFi 联网** — SmartConfig 配网 + 自动重连
 - 🔋 **电池供电** — 18650 锂电池, Type-C 充电
+
+### V2.0 增强版
+
+- 📝 **文本显示** — 滚动消息 + 状态图标（编译结果/Git 状态）
+- 🎙️ **本地唤醒词** — ESP-SR 离线唤醒词检测
+- 📡 **MQTT 推送** — VS Code 编译结果实时推送
+- 🌐 **Web 控制台** — 局域网 HTTP 配置界面
+- 📦 **OTA 升级** — 远程固件更新
+- ⏰ **番茄钟** — 25 分钟工作计时器
+- 🔋 **电源管理** — 自动休眠策略
+- 📏 **TOF 测距** — VL53L0X 精确避障
+- 👆 **触摸互动** — 单击/双击/长按手势
 
 ## 硬件规格
 
@@ -93,17 +107,39 @@ idf.py -p COMX flash monitor
 
 ## 文档索引
 
+### 需求与设计
+
 | 文档 | 说明 |
 |------|------|
 | [产品 PRD](docs/桌面机器人设计需求.md) | 产品需求和功能定义 |
-| [硬件需求分析](docs/requirement/hardware-schematic.md) | 硬件设计需求规格 |
+| [V1.0 MVP 需求](docs/requirement/v1.0-mvp-requirements.md) | MVP 功能需求规格 |
+| [V2.0 需求分析](docs/requirement/v2-requirement-analysis.md) | 增强版需求分析 |
+
+### 架构设计
+
+| 文档 | 说明 |
+|------|------|
+| [V1.0 架构](docs/architecture/v1.0-mvp-architecture.md) | MVP 软件架构设计 |
+| [V2.0 架构](docs/architecture/v2-enhanced-architecture.md) | 增强版架构设计 |
 | [硬件架构](docs/architecture/hardware-architecture.md) | 电源树、信号流、接口设计 |
+
+### 硬件设计
+
+| 文档 | 说明 |
+|------|------|
 | [原理图说明](docs/hardware/schematic-notes.md) | 各子系统电路详解 |
 | [引脚分配表](docs/hardware/pinout.md) | ESP32-S3 完整引脚映射 |
 | [物料清单](docs/hardware/bom.md) | BOM 和成本估算 |
 | [组装指南](docs/hardware/assembly-guide.md) | 从 PCB 到完整机器人 |
-| [设计验证报告](docs/testing/hardware-design-test-report.md) | 原理图和引脚验证 |
-| [设计审查报告](docs/review/hardware-design-review.md) | 代码审查和优化建议 |
+
+### 测试与审查
+
+| 文档 | 说明 |
+|------|------|
+| [V1.0 测试计划](docs/testing/v1.0-mvp-test-plan.md) | MVP 测试计划 |
+| [V2.0 测试计划](docs/testing/v2-test-plan.md) | 增强版测试计划 |
+| [V1.0 代码审查](docs/review/2026-07-11-mvp-code-review.md) | MVP 代码审查报告 |
+| [V2.0 代码审查](docs/review/v2-code-review.md) | 增强版代码审查报告 |
 
 ## 许可证
 

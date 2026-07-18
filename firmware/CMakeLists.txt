@@ -16,6 +16,8 @@ set(EXTRA_COMPONENT_DIRS
     "components/drivers/mpu6050"
     "components/drivers/ir_sensor"
     "components/drivers/battery"
+    "components/drivers/vl53l0x"
+    "components/drivers/touch_sensor"
     "components/services/wifi_manager"
     "components/services/display_manager"
     "components/services/emotion_engine"
@@ -24,8 +26,15 @@ set(EXTRA_COMPONENT_DIRS
     "components/services/motion_manager"
     "components/services/sensor_manager"
     "components/services/battery_monitor"
+    "components/services/text_display"
+    "components/services/mqtt_client"
+    "components/services/web_server"
+    "components/services/ota_service"
+    "components/services/wake_word"
+    "components/services/power_manager"
     "components/app/behavior_system"
     "components/app/ai_dialog"
+    "components/app/pomodoro"
 )
 
 # Include the IDF project

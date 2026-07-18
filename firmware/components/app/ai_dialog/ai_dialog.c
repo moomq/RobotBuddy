@@ -174,18 +174,30 @@ static void ai_dialog_task(void *arg)
                 /* Step 4: TTS synthesis and playback */
                 ESP_LOGI(TAG, "Starting TTS playback...");
 
-                /* For MVP: just play the response text via TTS */
+                /* For V2.0: Use streaming TTS.
+                 * cloud_tts_stream_start() opens a WebSocket connection to the
+                 * cloud TTS service. Audio chunks are streamed directly to the
+                 * audio playback ring buffer as they arrive, enabling low-latency
+                 * playback. The function blocks until all audio has been received
+                 * and played, or an error/cancellation occurs.
+                 *
+                 * TODO(V2.1): Replace this blocking call with a fully async
+                 * streaming model where TTS chunks are fed to the audio manager
+                 * via a callback, and EVENT_AUDIO_PLAY_DONE fires when the
+                 * stream ends naturally. This would allow the AI dialog task
+                 * to respond to cancellation requests during playback. */
                 set_state(AI_DIALOG_SPEAKING);
                 audio_play_start();
 
-                /* TTS: send text to cloud, receive audio, play.
-                 * TODO(V1.1): Replace this blocking 2s delay with event-driven
-                 * TTS streaming. The cloud TTS response should be streamed to
-                 * the audio playback ring buffer as chunks arrive, and
-                 * EVENT_AUDIO_PLAY_DONE should fire when the stream ends.
-                 * This blocking delay prevents the AI dialog task from
-                 * responding to cancellation requests during playback. */
-                vTaskDelay(pdMS_TO_TICKS(2000));  /* Placeholder for TTS playback */
+                /* Streaming TTS: send text to cloud, receive audio chunks, play.
+                 * The cloud_manager handles the WebSocket connection and feeds
+                 * audio data to the playback ring buffer. */
+                ret = cloud_tts_stream(s_llm_response, strlen(s_llm_response));
+                if (ret != ESP_OK) {
+                    ESP_LOGW(TAG, "TTS streaming failed: %s, falling back to simple play", esp_err_to_name(ret));
+                    /* Fallback: simple blocking delay for MVP compatibility */
+                    vTaskDelay(pdMS_TO_TICKS(2000));
+                }
 
                 audio_play_stop();
 

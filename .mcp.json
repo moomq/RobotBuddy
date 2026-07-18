@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "kicad": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "F:/05-github/KiCAD-MCP-Server/dist/index.js"
+      ],
+      "env": {
+        "NODE_ENV": "production",
+        "KICAD_PYTHON": "E:/kicad/bin/python.exe",
+        "KICAD_PATH": "E:/kicad",
+        "PYTHONPATH": "E:/kicad/bin/Lib/site-packages",
+        "LOG_LEVEL": "info",
+        "KICAD_AUTO_LAUNCH": "false",
+        "KICAD_INTERACTIVE_SCHEMATIC": "false",
+        "KICAD_MCP_DEV": "0"
+      }
+    }
+  }
+}

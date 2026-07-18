@@ -175,8 +175,6 @@ static void process_event(const robot_event_t *event)
         case EVENT_SENSOR_OBSTACLE:
             /* Obstacle detected — stop motion, show warning */
             transition_to(BEHAVIOR_STATE_WARNING);
-            /* Also send emergency stop to motion — no payload needed,
-             * emergency_stop() directly halts motors bypassing the queue. */
             {
                 robot_event_t stop_event = {
                     .id = EVENT_MOTION_EMERGENCY_STOP,
@@ -227,6 +225,83 @@ static void process_event(const robot_event_t *event)
                     transition_to(BEHAVIOR_STATE_ERROR);
                 }
             }
+            break;
+
+        /* ===== V2.0 New Events ===== */
+
+        /* Wake word detected — start listening */
+        case EVENT_WAKE_WORD_DETECTED:
+            if (s_current_state == BEHAVIOR_STATE_SLEEP ||
+                s_current_state == BEHAVIOR_STATE_IDLE) {
+                /* Wake up and listen — AI dialog will start capture */
+                transition_to(BEHAVIOR_STATE_LISTENING);
+            }
+            break;
+
+        /* Touch events */
+        case EVENT_TOUCH_SINGLE:
+            /* Single tap: pause/resume pomodoro, or toggle expression */
+            break;
+
+        case EVENT_TOUCH_DOUBLE:
+            /* Double tap: trigger voice dialog */
+            if (s_current_state == BEHAVIOR_STATE_IDLE ||
+                s_current_state == BEHAVIOR_STATE_SLEEP) {
+                transition_to(BEHAVIOR_STATE_LISTENING);
+            }
+            break;
+
+        case EVENT_TOUCH_LONG:
+            /* Long press: could trigger SmartConfig or other mode */
+            break;
+
+        /* Build status — developer tool integration */
+        case EVENT_BUILD_STATUS:
+            if (event->payload != NULL) {
+                build_status_event_t *bs = (build_status_event_t *)event->payload;
+                if (bs->status == 1) {
+                    /* Build success */
+                    transition_to(BEHAVIOR_STATE_HAPPY);
+                } else if (bs->status == 2) {
+                    /* Build failed */
+                    transition_to(BEHAVIOR_STATE_ERROR);
+                }
+            }
+            break;
+
+        /* Git status — show warning for uncommitted changes */
+        case EVENT_GIT_STATUS:
+            if (event->payload != NULL) {
+                git_status_event_t *gs = (git_status_event_t *)event->payload;
+                if (gs->conflicts > 0) {
+                    /* Merge conflicts — error */
+                    transition_to(BEHAVIOR_STATE_ERROR);
+                } else if (gs->uncommitted > 0) {
+                    /* Uncommitted changes — mild warning */
+                    if (s_current_state == BEHAVIOR_STATE_IDLE) {
+                        transition_to(BEHAVIOR_STATE_WARNING);
+                    }
+                }
+            }
+            break;
+
+        /* Pomodoro events */
+        case EVENT_POMODORO_START:
+            /* Entering focus mode */
+            if (s_current_state == BEHAVIOR_STATE_IDLE) {
+                /* Switch to FOCUS via emotion mapping */
+                emotion_set_state(EMOTION_FOCUS);
+            }
+            break;
+
+        case EVENT_POMODORO_DONE:
+            /* Pomodoro work period complete */
+            transition_to(BEHAVIOR_STATE_HAPPY);
+            break;
+
+        /* Power events */
+        case EVENT_POWER_STATE_CHANGE:
+            /* Power state changed — activity was already marked */
             break;
 
         default:
@@ -354,6 +429,17 @@ esp_err_t behavior_system_init(void)
     event_bus_subscribe(EVENT_SENSOR_EDGE, behavior_event_handler);
     event_bus_subscribe(EVENT_SENSOR_FALL_DETECTED, behavior_event_handler);
     event_bus_subscribe(EVENT_EMOTION_STATE_CHANGE, behavior_event_handler);
+
+    /* V2.0 event subscriptions */
+    event_bus_subscribe(EVENT_WAKE_WORD_DETECTED, behavior_event_handler);
+    event_bus_subscribe(EVENT_TOUCH_SINGLE, behavior_event_handler);
+    event_bus_subscribe(EVENT_TOUCH_DOUBLE, behavior_event_handler);
+    event_bus_subscribe(EVENT_TOUCH_LONG, behavior_event_handler);
+    event_bus_subscribe(EVENT_BUILD_STATUS, behavior_event_handler);
+    event_bus_subscribe(EVENT_GIT_STATUS, behavior_event_handler);
+    event_bus_subscribe(EVENT_POMODORO_START, behavior_event_handler);
+    event_bus_subscribe(EVENT_POMODORO_DONE, behavior_event_handler);
+    event_bus_subscribe(EVENT_POWER_STATE_CHANGE, behavior_event_handler);
 
     /* Create behavior task */
     BaseType_t ret = xTaskCreatePinnedToCore(
