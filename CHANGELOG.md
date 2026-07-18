@@ -4,6 +4,62 @@
 
 ---
 
+## [0.4.0] - 2026-07-19
+
+### 新增
+
+- **OTA 升级服务** — 完整的远程固件升级系统
+  - **RSA-2048 签名验证** — 防止恶意固件注入
+  - **SHA256 完整性校验** — 确保固件完整
+  - **TLS 证书锁定** — 防中间人攻击
+  - **AB 分区滚动升级** — factory + ota_0 + ota_1 策略
+  - **自动回滚** — 新固件异常时自动恢复（watchdog ≥3, panic ≥5）
+  - **断点续传** — 网络中断后继续下载
+  - **低电量保护** — 电量 <20% 拒绝升级
+  - **进度显示** — 实时升级进度和状态
+  - **MQTT 命令处理** — 远程升级控制
+  - **健康检查系统** — WiFi/MQTT/Display/Sensor 检查
+  - **NVS 持久化** — 回滚计数和断点信息
+
+- **OTA 文档**
+  - 需求分析 (`docs/requirement/ota-upgrade-requirements.md`)
+  - 架构设计 (`docs/architecture/ota-upgrade-architecture.md`)
+  - 测试计划 (`docs/testing/ota-upgrade-test-plan.md`)
+  - API 文档 (`docs/firmware/ota-upgrade-api.md`)
+
+- **OTA 配置**
+  - 可配置健康检查超时（默认 30s）
+  - 可配置回滚阈值（watchdog=3, panic=5）
+  - 可配置最低电量百分比（默认 20%）
+  - 可配置重试延迟和下载缓冲区
+
+- **OTA 事件**
+  - 新增 15 个 OTA 事件 ID (EVENT_OTA_*, 0x0700-0x07FF)
+  - 新增 OTA payload 结构体
+
+### 变更
+
+- 更新 `docs/development-progress.md` — 反映 V2.0 OTA 功能完成
+- 固件版本升级至 0.4.0-v2-ota
+
+### 安全
+
+- 实现 RSA-2048 签名验证（使用 mbedTLS）
+- 添加 TLS 证书锁定
+- 添加 SHA256 固件完整性验证
+- 保护 factory 分区不被 OTA 覆盖
+- 添加签名 URL 支持（防重放攻击）
+
+### 测试
+
+- 单元测试计划覆盖所有 OTA 模块
+- 集成测试覆盖事件总线和 MQTT 命令
+- 系统测试覆盖端到端升级流程
+- 安全测试覆盖签名验证和证书锁定
+- 压力测试覆盖网络中断和长期运行
+
+---
+
 ## [0.3.0] - 2026-07-18
 
 ### 新增

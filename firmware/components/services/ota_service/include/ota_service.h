@@ -1,159 +1,242 @@
-/*
- * RobotBuddy — OTA Service
- * =========================
- * Over-The-Air firmware upgrade service for ESP32-S3.
+/**
+ * @file ota_service.h
+ * @brief OTA 升级服务主接口
  *
- * Downloads firmware images via HTTP, verifies integrity with SHA256,
- * and applies updates using the ESP-IDF OTA partition mechanism.
- * Supports automatic rollback on boot failure.
+ * 提供完整的 OTA 升级功能，包括版本检查、固件下载、签名验证、
+ * 分区管理和自动回滚。
  *
- * Features:
- *   - HTTP firmware download with 4KB chunked reads (PSRAM-backed)
- *   - SHA256 integrity verification (mbedtls)
- *   - Firmware header magic byte validation
- *   - Optional size check when expected_size > 0
- *   - State machine: IDLE -> DOWNLOADING -> VERIFYING -> APPLYING -> REBOOTING
- *   - Automatic rollback via esp_ota_mark_app_invalid_rollback_and_reboot()
- *   - Progress tracking via event bus (EVENT_OTA_PROGRESS)
- *   - Thread-safe: mutex prevents concurrent OTA operations
- *   - Configurable HTTP timeouts (default 30s connect, 60s total)
- *
- * Copyright (c) 2026 RobotBuddy Project
- * SPDX-License-Identifier: MIT
+ * @copyright Copyright (c) 2026 RobotBuddy
+ * @author RobotBuddy Team
+ * @date 2026-07-19
  */
 
 #pragma once
 
 #include "esp_err.h"
-#include "robot_events.h"
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include "ota_types.h"
+#include "ota_config.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* ============================================================
- * Configuration Defaults
- * ============================================================ */
-
-/** HTTP connection timeout in milliseconds */
-#define OTA_DEFAULT_CONNECT_TIMEOUT_MS   30000
-
-/** Total HTTP operation timeout in milliseconds */
-#define OTA_DEFAULT_TOTAL_TIMEOUT_MS     60000
-
-/** Download chunk size in bytes (allocated in PSRAM) */
-#define OTA_DOWNLOAD_CHUNK_SIZE          4096
-
-/** Maximum firmware URL length */
-#define OTA_URL_MAX_LEN                  256
-
-/** SHA256 hex string length (64 hex chars + null terminator) */
-#define OTA_SHA256_HEX_LEN               65
-
-/** Delay before reboot after successful OTA (ms) */
-#define OTA_REBOOT_DELAY_MS              1000
-
-/* ============================================================
- * Configuration Structure
- * ============================================================ */
-
 /**
- * @brief OTA service configuration
- *
- * Passed to ota_service_init(). Provides default timeouts and
- * optional firmware validation parameters.
+ * @defgroup OTA_Service OTA 服务接口
+ * @{
  */
-typedef struct {
-    char firmware_url[OTA_URL_MAX_LEN];   /**< Default firmware URL (optional) */
-    uint32_t expected_size;                /**< Expected firmware size (0 = skip size check) */
-    char expected_sha256[OTA_SHA256_HEX_LEN]; /**< Expected SHA256 hex (empty = skip SHA256 check) */
-    uint32_t connect_timeout_ms;           /**< HTTP connect timeout (0 = use default) */
-    uint32_t total_timeout_ms;             /**< Total HTTP timeout (0 = use default) */
-} ota_config_t;
 
 /* ============================================================
- * Public API
+ * 初始化与反初始化
  * ============================================================ */
 
 /**
- * @brief Initialize the OTA service
+ * @brief 初始化 OTA 服务
  *
- * Initializes the internal mutex and resets state to OTA_STATE_IDLE.
- * Safe to call multiple times; subsequent calls return ESP_OK.
+ * 初始化 OTA 管理器、分区管理器和安全模块。
+ * 创建 OTA 服务任务，准备接收升级命令。
  *
- * @param config Configuration with defaults. Pass NULL for defaults.
- * @return ESP_OK on success
- *         ESP_ERR_NO_MEM if mutex allocation fails
+ * @return ESP_OK 成功
+ *         ESP_ERR_NO_MEM 内存不足
+ *         ESP_FAIL 初始化失败
  */
-esp_err_t ota_service_init(const ota_config_t *config);
+esp_err_t ota_service_init(void);
 
 /**
- * @brief Deinitialize the OTA service
+ * @brief 反初始化 OTA 服务
  *
- * Cancels any in-flight OTA operation, releases resources,
- * and resets state to OTA_STATE_IDLE.
+ * 停止 OTA 服务任务，释放资源。
  *
- * @return ESP_OK on success
+ * @return ESP_OK 成功
  */
 esp_err_t ota_service_deinit(void);
 
 /**
- * @brief Start an OTA firmware upgrade
+ * @brief 检查 OTA 服务是否已初始化
  *
- * Downloads firmware from the given URL, verifies SHA256 if provided,
- * and writes to the OTA partition. On success, sets the boot partition
- * and reboots after a 1-second delay.
- *
- * Publishes:
- *   - EVENT_OTA_START when download begins
- *   - EVENT_OTA_PROGRESS periodically during download
- *   - EVENT_OTA_COMPLETE on successful verification and apply
- *   - EVENT_OTA_ERROR on any failure
- *
- * On error, transitions to OTA_STATE_ERROR. If the new firmware fails
- * to boot, the ESP-IDF bootloader will automatically roll back.
- *
- * @param url    HTTP(S) URL to download firmware from (null-terminated)
- * @param sha256 Expected SHA256 hex string (may be NULL or empty to skip)
- * @return ESP_OK on success (device will reboot)
- *         ESP_ERR_INVALID_ARG if url is NULL or empty
- *         ESP_ERR_INVALID_STATE if not initialized or OTA already in progress
- *         ESP_FAIL on download, verification, or write error
+ * @return true 已初始化
+ *         false 未初始化
  */
-esp_err_t ota_start(const char *url, const char *sha256);
+bool ota_service_is_initialized(void);
+
+/* ============================================================
+ * 版本检查
+ * ============================================================ */
 
 /**
- * @brief Cancel an in-flight OTA operation
+ * @brief 检查是否有新版本
  *
- * Aborts the current download and resets state to OTA_STATE_IDLE.
- * The partially written OTA partition is not cleaned up; it will be
- * overwritten on the next OTA attempt.
+ * 向服务器查询是否有新固件版本可用。
  *
- * @return ESP_OK on success
- *         ESP_ERR_INVALID_STATE if not initialized or no OTA in progress
+ * @param[out] info 更新信息（如果有新版本）
+ * @return ESP_OK 检查成功
+ *         ESP_ERR_INVALID_ARG 参数无效
+ *         ESP_ERR_WIFI_DISCONNECT WiFi 未连接
+ *         ESP_FAIL 检查失败
  */
-esp_err_t ota_cancel(void);
+esp_err_t ota_service_check_update(ota_update_info_t *info);
+
+/* ============================================================
+ * 升级操作
+ * ============================================================ */
 
 /**
- * @brief Get the current download progress percentage
+ * @brief 开始 OTA 升级
  *
- * Thread-safe.
+ * 下载固件、验证签名、刷写到备用分区。
+ * 支持断点续传。
  *
- * @return Progress percentage (0-100), or 0 if not downloading
+ * @param[in] info 更新信息
+ * @return ESP_OK 开始成功
+ *         ESP_ERR_INVALID_ARG 参数无效
+ *         ESP_ERR_INVALID_STATE OTA 已在进行中
+ *         ESP_ERR_LOW_BATTERY 电量不足
+ *         ESP_FAIL 启动失败
  */
-uint8_t ota_get_progress(void);
+esp_err_t ota_service_start_upgrade(const ota_update_info_t *info);
 
 /**
- * @brief Get the current OTA state
+ * @brief 取消 OTA 升级
  *
- * Thread-safe.
+ * 取消正在进行的升级操作。
  *
- * @return Current ota_state_t value
+ * @return ESP_OK 取消成功
+ *         ESP_ERR_INVALID_STATE OTA 未在进行中
  */
-ota_state_t ota_get_state(void);
+esp_err_t ota_service_cancel(void);
+
+/**
+ * @brief 应用升级
+ *
+ * 标记新分区为启动分区，准备重启。
+ *
+ * @return ESP_OK 成功
+ *         ESP_FAIL 失败
+ */
+esp_err_t ota_service_apply(void);
+
+/**
+ * @brief 确认升级成功
+ *
+ * 新固件启动后健康检查通过，确认升级。
+ * 标记新分区为有效，防止回滚。
+ *
+ * @return ESP_OK 成功
+ */
+esp_err_t ota_service_commit(void);
+
+/* ============================================================
+ * 状态查询
+ * ============================================================ */
+
+/**
+ * @brief 获取 OTA 当前状态
+ *
+ * @return OTA 状态
+ */
+ota_state_t ota_service_get_state(void);
+
+/**
+ * @brief 获取 OTA 进度
+ *
+ * @param[out] progress 进度信息
+ * @return ESP_OK 成功
+ *         ESP_ERR_INVALID_ARG 参数无效
+ */
+esp_err_t ota_service_get_progress(ota_progress_t *progress);
+
+/**
+ * @brief 获取 OTA 错误信息
+ *
+ * @param[out] error 错误信息
+ * @return ESP_OK 成功
+ *         ESP_ERR_NOT_FOUND 无错误
+ */
+esp_err_t ota_service_get_error(ota_error_t *error);
+
+/**
+ * @brief 获取当前运行分区信息
+ *
+ * @param[out] label 分区标签（如 "ota_0"）
+ * @param[in] label_size 标签缓冲区大小
+ * @return ESP_OK 成功
+ */
+esp_err_t ota_service_get_running_partition(char *label, size_t label_size);
+
+/* ============================================================
+ * 回滚操作
+ * ============================================================ */
+
+/**
+ * @brief 手动触发回滚
+ *
+ * 回滚到上一个正常固件版本。
+ *
+ * @return ESP_OK 成功
+ *         ESP_FAIL 失败
+ */
+esp_err_t ota_service_rollback(void);
+
+/**
+ * @brief 回退到出厂固件
+ *
+ * 回退到 factory 分区的出厂固件。
+ *
+ * @return ESP_OK 成功
+ *         ESP_FAIL 失败
+ */
+esp_err_t ota_service_factory_reset(void);
+
+/* ============================================================
+ * 回调注册
+ * ============================================================ */
+
+/**
+ * @brief 注册状态变化回调
+ *
+ * @param[in] cb 回调函数
+ * @return ESP_OK 成功
+ *         ESP_ERR_NO_MEM 已达最大回调数
+ */
+esp_err_t ota_service_register_state_callback(ota_state_callback_t cb);
+
+/**
+ * @brief 注册进度回调
+ *
+ * @param[in] cb 回调函数
+ * @return ESP_OK 成功
+ *         ESP_ERR_NO_MEM 已达最大回调数
+ */
+esp_err_t ota_service_register_progress_callback(ota_progress_callback_t cb);
+
+/**
+ * @brief 注册结果回调
+ *
+ * @param[in] cb 回调函数
+ * @return ESP_OK 成功
+ *         ESP_ERR_NO_MEM 已达最大回调数
+ */
+esp_err_t ota_service_register_result_callback(ota_result_callback_t cb);
+
+/* ============================================================
+ * MQTT 命令处理
+ * ============================================================ */
+
+/**
+ * @brief 处理 MQTT OTA 命令
+ *
+ * 解析并执行来自 MQTT 的 OTA 命令。
+ *
+ * @param[in] payload_json JSON 格式的命令载荷
+ *
+ * 命令格式:
+ * {"cmd":"check"} - 检查更新
+ * {"cmd":"upgrade","url":"...","version":"...","sha256":"..."} - 开始升级
+ * {"cmd":"rollback"} - 回滚
+ * {"cmd":"factory_reset"} - 回退出厂固件
+ */
+void ota_service_handle_mqtt_command(const char *payload_json);
+
+/** @} */
 
 #ifdef __cplusplus
 }

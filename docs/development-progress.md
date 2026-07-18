@@ -1,8 +1,8 @@
-# RobotBuddy V1.0 MVP — 开发进度报告
+# RobotBuddy V2.0 — 开发进度报告
 
-> **版本:** 1.1  
-> **日期:** 2026-07-11  
-> **状态:** MVP代码完成 + PC模拟器实现完成
+> **版本:** 2.0
+> **日期:** 2026-07-19
+> **状态:** MVP完成 + OTA升级功能开发完成
 
 ---
 
@@ -53,6 +53,9 @@
 | 运动管理器 | `services/motion_manager/` | 命令队列+急停 | ✅ |
 | 传感器管理器 | `services/sensor_manager/` | IMU/IR/ADC轮询+事件发布 | ✅ |
 | 电池监控 | `services/battery_monitor/` | 电压/百分比/充电状态 | ✅ |
+| OTA 服务 | `services/ota_service/` | HTTPS下载+签名验证+自动回滚 | ✅ 新增 |
+| MQTT 客户端 | `services/mqtt_client/` | MQTT连接+消息订阅/发布 | ✅ 新增 |
+| Web 服务器 | `services/web_server/` | HTTP控制台+REST API | ✅ 新增 |
 
 ### 应用层 (Application)
 
@@ -133,6 +136,39 @@
 - `docs/requirement/fr01-pc-simulator-requirements.md` — 需求规格
 - `docs/architecture/fr01-pc-simulator-architecture.md` — 架构设计
 - `docs/review/2026-07-11-pc-simulator-review.md` — 代码审查
+
+---
+
+## V2.0 OTA 升级功能（新增）
+
+| 组件 | 文件 | 说明 | 状态 |
+|------|------|------|------|
+| OTA 类型定义 | `ota_service/include/ota_types.h` | 状态/错误码/数据结构 | ✅ |
+| OTA 配置 | `ota_service/include/ota_config.h` | 编译时常量配置 | ✅ |
+| OTA 服务接口 | `ota_service/include/ota_service.h` | 公共 API 定义 | ✅ |
+| OTA 管理器 | `ota_service/src/ota_manager.c` | 状态机+进度管理 | ✅ |
+| OTA 下载器 | `ota_service/src/ota_download.c` | HTTPS下载+断点续传 | ✅ |
+| OTA 验证器 | `ota_service/src/ota_verify.c` | RSA-2048签名+SHA256 | ✅ |
+| OTA 分区管理 | `ota_service/src/ota_partition.c` | AB分区切换 | ✅ |
+| OTA 回滚器 | `ota_service/src/ota_rollback.c` | 自动回滚+健康检查 | ✅ |
+| OTA 安全模块 | `ota_service/src/ota_security.c` | TLS证书锁定 | ✅ |
+| OTA 主任务 | `ota_service/src/ota_service.c` | 任务入口+事件处理 | ✅ |
+
+**关键特性:**
+- ✅ RSA-2048 签名验证，防止恶意固件注入
+- ✅ SHA256 完整性校验，确保固件完整
+- ✅ TLS 证书锁定，防中间人攻击
+- ✅ AB 分区滚动升级，永不覆盖 factory
+- ✅ 自动回滚，新固件异常时自动恢复
+- ✅ 断点续传，网络中断后继续下载
+- ✅ 低电量保护，电量 <20% 拒绝升级
+- ✅ 进度显示，实时升级进度
+
+**新增文档:**
+- `docs/requirement/ota-upgrade-requirements.md` — 需求分析
+- `docs/architecture/ota-upgrade-architecture.md` — 架构设计
+- `docs/testing/ota-upgrade-test-plan.md` — 测试计划
+- `docs/firmware/ota-upgrade-api.md` — API 文档
 
 ---
 
